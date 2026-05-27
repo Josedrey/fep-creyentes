@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-amante: #D4145A;
+  --color-rebelde: #FF2D2D;
+  --color-bufon: #FFD60A;
+  --color-explorador: #39FF14;
+  --color-mago: #7B2CBF;
+  --color-creador: #00E0FF;
+}
+
+html, body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  background: #000;
+  color: #fff;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
