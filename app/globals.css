@@ -8,27 +8,29 @@
   --color-mago: #7B2CBF;
   --color-creador: #00E0FF;
 
-  /* Base oscura con tinte púrpura nocturno - menos plano que negro puro */
   --color-base: #0a0612;
   --color-base-soft: #1a0f24;
 
-  --font-display: var(--font-modak), system-ui, sans-serif;
+  --font-display: var(--font-bagel), Impact, sans-serif;
   --font-body: var(--font-nunito), system-ui, sans-serif;
-  --font-arquetipo: var(--font-fraunces), Georgia, serif;
+  --font-arquetipo: var(--font-rubik), system-ui, sans-serif;
   --font-acento: var(--font-bagel), Impact, sans-serif;
 }
 
-html, body {
+/* FIX FONDO: el body NO debe tener background, solo el html (fallback).
+   Si el body lo tiene, tapa los elementos con z-index negativo del FondoLiquido. */
+html {
+  background: var(--color-base);
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  background: var(--color-base);
-  color: #fff;
 }
 
 body {
+  color: #fff;
   font-family: var(--font-body);
   font-weight: 300;
+  background: transparent; /* CRÍTICO: para que se vea el FondoLiquido */
 }
 
 button {
@@ -36,53 +38,54 @@ button {
   font-family: var(--font-body);
 }
 
-/* Clases utilitarias para fuentes */
 .font-display { font-family: var(--font-display); }
 .font-body { font-family: var(--font-body); }
 .font-arquetipo { font-family: var(--font-arquetipo); }
 .font-acento { font-family: var(--font-acento); }
 
-/* Variaciones por arquetipo: misma familia Fraunces, distinta personalidad */
+/* === 6 personalidades de Rubik para los arquetipos === */
+
 .arq-amante {
   font-family: var(--font-arquetipo);
   font-weight: 400;
   font-style: italic;
   letter-spacing: 0;
-  font-variation-settings: "SOFT" 100, "opsz" 144;
 }
+
 .arq-rebelde {
   font-family: var(--font-arquetipo);
   font-weight: 900;
   letter-spacing: -0.03em;
   text-transform: uppercase;
-  font-variation-settings: "SOFT" 0, "opsz" 144;
 }
+
 .arq-bufon {
-  font-family: var(--font-acento);
-  font-weight: 400;
-  letter-spacing: 0.02em;
+  font-family: var(--font-arquetipo);
+  font-weight: 800;
+  letter-spacing: 0;
 }
+
 .arq-explorador {
   font-family: var(--font-arquetipo);
   font-weight: 300;
-  letter-spacing: 0.08em;
-  font-variation-settings: "SOFT" 50, "opsz" 144;
+  letter-spacing: 0.12em;
 }
+
 .arq-mago {
   font-family: var(--font-arquetipo);
   font-weight: 500;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  font-variation-settings: "SOFT" 100, "opsz" 144;
 }
+
 .arq-creador {
   font-family: var(--font-arquetipo);
   font-weight: 700;
+  font-style: italic;
   letter-spacing: -0.02em;
-  font-variation-settings: "SOFT" 0, "opsz" 8;
 }
 
-/* Botones */
+/* === Botones === */
 .btn-primary {
   font-family: var(--font-body);
   font-weight: 700;
@@ -93,18 +96,12 @@ button {
   font-size: 1.05rem;
   letter-spacing: 0.02em;
   transition: transform 0.2s ease, box-shadow 0.3s ease;
-  box-shadow: 0 0 0 0 rgba(255,255,255,0);
 }
-.btn-primary:active:not(:disabled) {
-  transform: scale(0.97);
-}
+.btn-primary:active:not(:disabled) { transform: scale(0.97); }
 .btn-primary:not(:disabled):hover {
   box-shadow: 0 0 40px 0 rgba(255,255,255,0.25);
 }
-.btn-primary:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
+.btn-primary:disabled { opacity: 0.25; cursor: not-allowed; }
 
 .btn-ghost {
   font-family: var(--font-body);
@@ -118,19 +115,17 @@ button {
   letter-spacing: 0.02em;
   transition: all 0.2s ease;
 }
-.btn-ghost:active:not(:disabled) {
-  transform: scale(0.97);
-}
+.btn-ghost:active:not(:disabled) { transform: scale(0.97); }
 .btn-ghost:hover:not(:disabled) {
   background: rgba(255,255,255,0.06);
   border-color: rgba(255,255,255,0.5);
 }
 
-/* Inputs */
+/* === Inputs === */
 .input-ritual {
   font-family: var(--font-body);
   font-weight: 400;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.18);
   color: #fff;
   padding: 1rem 1.5rem;
@@ -139,9 +134,10 @@ button {
   width: 100%;
   outline: none;
   transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 .input-ritual:focus {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.12);
   border-color: rgba(255,255,255,0.5);
 }
 .input-ritual::placeholder {
@@ -149,24 +145,22 @@ button {
   font-weight: 300;
 }
 
-/* Eyebrow / labels */
+/* === Eyebrow === */
 .eyebrow {
   font-family: var(--font-body);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.65);
 }
 
-/* Animaciones */
+/* === Animaciones === */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fade-up {
-  animation: fadeUp 0.6s ease-out forwards;
-}
+.fade-up { animation: fadeUp 0.6s ease-out forwards; }
 .fade-up-delay-1 { animation: fadeUp 0.6s 0.1s ease-out backwards; }
 .fade-up-delay-2 { animation: fadeUp 0.6s 0.25s ease-out backwards; }
 .fade-up-delay-3 { animation: fadeUp 0.6s 0.4s ease-out backwards; }
