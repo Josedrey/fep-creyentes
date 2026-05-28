@@ -48,23 +48,50 @@ export default function FondoLiquido({
   return <FondoDesktop paleta={paleta} intensity={intensity} />;
 }
 
-// ---------- Mobile: 2 capas de gradientes en movimiento opuesto ----------
+// ---------- Mobile: 2 capas animadas por JS (iOS no pausa rAF) ----------
 function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: number }) {
-  const c = paleta;
+  const capaARef = useRef<HTMLDivElement | null>(null);
+  const capaBRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const tRef = useRef(0);
 
-  // Capa A: 3 gradientes
+  const c = paleta;
   const capaA = [
     `radial-gradient(circle at 25% 30%, ${c[0]}, transparent 40%)`,
     `radial-gradient(circle at 75% 25%, ${c[1]}, transparent 40%)`,
     `radial-gradient(circle at 50% 70%, ${c[2]}, transparent 45%)`,
   ].join(", ");
-
-  // Capa B: otros 3 gradientes, posiciones distintas
   const capaB = [
     `radial-gradient(circle at 80% 75%, ${c[3] || c[0]}, transparent 40%)`,
     `radial-gradient(circle at 20% 80%, ${c[4] || c[1]}, transparent 40%)`,
     `radial-gradient(circle at 60% 40%, ${c[5] || c[2]}, transparent 42%)`,
   ].join(", ");
+
+  useEffect(() => {
+    const tick = () => {
+      tRef.current += 0.008;
+      const t = tRef.current;
+
+      if (capaARef.current) {
+        const x = Math.cos(t * 0.5) * 8;
+        const y = Math.sin(t * 0.4) * 7;
+        const s = 1.25 + Math.sin(t * 0.3) * 0.08;
+        const r = Math.sin(t * 0.35) * 3;
+        capaARef.current.style.transform = `translate(${x}%, ${y}%) scale(${s}) rotate(${r}deg)`;
+      }
+      if (capaBRef.current) {
+        const x = Math.cos(t * 0.4 + 2) * -8;
+        const y = Math.sin(t * 0.5 + 1) * -7;
+        const s = 1.3 + Math.cos(t * 0.35) * 0.08;
+        const r = Math.cos(t * 0.4) * -3;
+        capaBRef.current.style.transform = `translate(${x}%, ${y}%) scale(${s}) rotate(${r}deg)`;
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, []);
 
   return (
     <div
@@ -73,49 +100,29 @@ function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: numbe
       style={{ background: "#0a0612" }}
     >
       <div
-        className="absolute fep-capaA"
+        ref={capaARef}
+        className="absolute"
         style={{
           inset: "-30%",
           background: capaA,
           opacity: intensity,
           filter: "blur(40px)",
+          willChange: "transform",
         }}
       />
       <div
-        className="absolute fep-capaB"
+        ref={capaBRef}
+        className="absolute"
         style={{
           inset: "-30%",
           background: capaB,
           opacity: intensity * 0.9,
           filter: "blur(45px)",
           mixBlendMode: "screen",
+          willChange: "transform",
         }}
       />
       <div className="absolute inset-0 bg-black/35" />
-      <style>{`
-        @keyframes fepCapaA {
-          0%   { transform: translate(0%, 0%) rotate(0deg) scale(1.2); }
-          25%  { transform: translate(8%, -6%) rotate(3deg) scale(1.3); }
-          50%  { transform: translate(-5%, 8%) rotate(-2deg) scale(1.25); }
-          75%  { transform: translate(6%, 5%) rotate(2deg) scale(1.35); }
-          100% { transform: translate(0%, 0%) rotate(0deg) scale(1.2); }
-        }
-        @keyframes fepCapaB {
-          0%   { transform: translate(0%, 0%) rotate(0deg) scale(1.3); }
-          25%  { transform: translate(-8%, 6%) rotate(-3deg) scale(1.2); }
-          50%  { transform: translate(7%, -7%) rotate(2deg) scale(1.35); }
-          75%  { transform: translate(-6%, -4%) rotate(-2deg) scale(1.25); }
-          100% { transform: translate(0%, 0%) rotate(0deg) scale(1.3); }
-        }
-        .fep-capaA {
-          animation: fepCapaA 9s ease-in-out infinite;
-          will-change: transform;
-        }
-        .fep-capaB {
-          animation: fepCapaB 11s ease-in-out infinite;
-          will-change: transform;
-        }
-      `}</style>
     </div>
   );
 }
