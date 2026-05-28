@@ -8,22 +8,14 @@ type Props = {
   arcoiris?: boolean;
 };
 
-const esMobile = () => {
+const detectarMobile = () => {
   if (typeof window === "undefined") return false;
-  return /Mobi|Android|iPad|iPhone|iPod/.test(navigator.userAgent);
+  return /Mobi|Android|iPad|iPhone|iPod/.test(navigator.userAgent) || window.innerWidth < 768;
 };
 
 const PALETA_ARCOIRIS = [
-  "#FFD60A",
-  "#7B2CBF",
-  "#39FF14",
-  "#FF2D2D",
-  "#00E0FF",
-  "#FF6B35",
-  "#06FFA5",
-  "#D4145A",
-  "#9D4EDD",
-  "#FF1493",
+  "#FFD60A", "#7B2CBF", "#39FF14", "#FF2D2D", "#00E0FF",
+  "#FF6B35", "#06FFA5", "#D4145A", "#9D4EDD", "#FF1493",
 ];
 
 export default function FondoLiquido({
@@ -31,75 +23,111 @@ export default function FondoLiquido({
   intensity = 0.85,
   arcoiris = true,
 }: Props) {
+  const [esMobile, setEsMobile] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setEsMobile(detectarMobile());
+  }, []);
+
+  // Resolver paleta
+  let paleta: string[];
+  if (arcoiris || !colors || colors.length === 0) {
+    paleta = PALETA_ARCOIRIS;
+  } else {
+    paleta = [];
+    for (let i = 0; i < 10; i++) paleta.push(colors[i % colors.length]);
+  }
+
+  // Mientras detecta, fondo base (evita parpadeo)
+  if (esMobile === null) {
+    return (
+      <div
+        aria-hidden
+        className="fixed inset-0 -z-10"
+        style={{ background: "#0a0612" }}
+      />
+    );
+  }
+
+  // ====== VERSIÓN MÓVIL: gradiente animado liviano ======
+  if (esMobile) {
+    return <FondoMobile paleta={paleta} intensity={intensity} />;
+  }
+
+  // ====== VERSIÓN DESKTOP: goo filter completo ======
+  return <FondoDesktop paleta={paleta} intensity={intensity} />;
+}
+
+// ---------- Mobile: CSS gradients animados, sin SVG filter ----------
+function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: number }) {
+  // Usar 4-5 colores para los gradientes
+  const c = paleta;
+  const grad1 = `radial-gradient(circle at 20% 25%, ${c[0]}, transparent 45%)`;
+  const grad2 = `radial-gradient(circle at 80% 20%, ${c[1]}, transparent 45%)`;
+  const grad3 = `radial-gradient(circle at 25% 80%, ${c[2]}, transparent 45%)`;
+  const grad4 = `radial-gradient(circle at 75% 75%, ${c[3] || c[0]}, transparent 45%)`;
+  const grad5 = `radial-gradient(circle at 50% 50%, ${c[4] || c[1]}, transparent 50%)`;
+
+  return (
+    <div
+      aria-hidden
+      className="fixed inset-0 -z-10 overflow-hidden"
+      style={{ background: "#0a0612" }}
+    >
+      <div
+        className="absolute inset-0 fep-aurora"
+        style={{
+          background: `${grad1}, ${grad2}, ${grad3}, ${grad4}, ${grad5}`,
+          backgroundColor: "#0a0612",
+          opacity: intensity,
+          filter: "blur(30px)",
+        }}
+      />
+      <div className="absolute inset-0 bg-black/35" />
+      <style>{`
+        @keyframes fepAurora {
+          0%   { transform: scale(1.1) translate(0%, 0%); }
+          33%  { transform: scale(1.25) translate(-4%, 3%); }
+          66%  { transform: scale(1.15) translate(3%, -3%); }
+          100% { transform: scale(1.1) translate(0%, 0%); }
+        }
+        .fep-aurora {
+          animation: fepAurora 14s ease-in-out infinite;
+          will-change: transform;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ---------- Desktop: SVG goo filter con blobs siguiendo el mouse suavemente ----------
+function FondoDesktop({ paleta, intensity }: { paleta: string[]; intensity: number }) {
   const blobs = useRef<(SVGCircleElement | null)[]>(Array(10).fill(null));
   const perturbacionRef = useRef({ x: 0, y: 0 });
   const perturbacionActualRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
   const tRef = useRef(0);
   const ultimaInteraccionRef = useRef(0);
-  const [esMobileState, setEsMobileState] = useState(false);
-  const [mostrarBotonGiro, setMostrarBotonGiro] = useState(false);
-  const [giroActivo, setGiroActivo] = useState(false);
 
   useEffect(() => {
-    const mobile = esMobile();
-    setEsMobileState(mobile);
-
     const handleMove = (e: PointerEvent) => {
       ultimaInteraccionRef.current = performance.now();
       const w = window.innerWidth;
       const h = window.innerHeight;
-      // Mouse: perturbación SUTIL. Max ±0.08 (era 0.3).
       perturbacionRef.current = {
         x: (e.clientX / w - 0.5) * 0.08,
         y: (e.clientY / h - 0.5) * 0.08,
       };
     };
-
-    const handleOrientation = (e: DeviceOrientationEvent) => {
-      ultimaInteraccionRef.current = performance.now();
-      const gamma = e.gamma ?? 0;
-      const beta = e.beta ?? 0;
-      perturbacionRef.current = {
-        x: Math.max(-30, Math.min(30, gamma)) / 400,
-        y: Math.max(-30, Math.min(30, (beta - 30))) / 400,
-      };
-    };
-
-    if (mobile) {
-      // @ts-expect-error - tipo no estándar
-      const necesitaPermiso = typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function";
-
-      if (necesitaPermiso) {
-        // iOS 13+
-        const ya = localStorage.getItem("fep_giro_permiso");
-        if (ya === "granted") {
-          window.addEventListener("deviceorientation", handleOrientation);
-          setGiroActivo(true);
-        } else {
-          // Siempre mostrar el botón si no se concedió aún - persistente, no se descarta
-          setMostrarBotonGiro(true);
-        }
-      } else {
-        // Android, iOS antiguos
-        window.addEventListener("deviceorientation", handleOrientation);
-        setGiroActivo(true);
-      }
-    } else {
-      window.addEventListener("pointermove", handleMove);
-    }
+    window.addEventListener("pointermove", handleMove);
 
     const tick = () => {
       tRef.current += 0.004;
       const ahora = performance.now();
-      const sinInteractuar = ahora - ultimaInteraccionRef.current > 1500;
-
-      if (sinInteractuar) {
-        // Decay rápido de la perturbación cuando no hay input
+      if (ahora - ultimaInteraccionRef.current > 1500) {
         perturbacionRef.current.x *= 0.96;
         perturbacionRef.current.y *= 0.96;
       }
-
       perturbacionActualRef.current.x += (perturbacionRef.current.x - perturbacionActualRef.current.x) * 0.04;
       perturbacionActualRef.current.y += (perturbacionRef.current.y - perturbacionActualRef.current.y) * 0.04;
 
@@ -120,9 +148,7 @@ export default function FondoLiquido({
         { baseX: 50, baseY: 50, sp: 0.75, ph: 6.3, rad: 13 },
       ];
 
-      const cantidad = mobile ? 6 : 10;
-
-      for (let i = 0; i < cantidad; i++) {
+      for (let i = 0; i < 10; i++) {
         const o = orbits[i];
         const blob = blobs.current[i];
         if (!blob) continue;
@@ -138,120 +164,59 @@ export default function FondoLiquido({
 
     return () => {
       window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("deviceorientation", handleOrientation);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
-  async function pedirPermisoGiro() {
-    // @ts-expect-error - tipo no estándar
-    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-      try {
-        // @ts-expect-error - tipo no estándar
-        const permiso = await DeviceOrientationEvent.requestPermission();
-        if (permiso === "granted") {
-          localStorage.setItem("fep_giro_permiso", "granted");
-          window.addEventListener("deviceorientation", (e) => {
-            ultimaInteraccionRef.current = performance.now();
-            const gamma = e.gamma ?? 0;
-            const beta = e.beta ?? 0;
-            perturbacionRef.current = {
-              x: Math.max(-30, Math.min(30, gamma)) / 400,
-              y: Math.max(-30, Math.min(30, (beta - 30))) / 400,
-            };
-          });
-          setGiroActivo(true);
-          setMostrarBotonGiro(false);
-        } else {
-          localStorage.setItem("fep_giro_permiso", "denied");
-          setMostrarBotonGiro(false);
-        }
-      } catch {
-        setMostrarBotonGiro(false);
-      }
-    }
-  }
-
-  let paleta: string[];
-  if (arcoiris || !colors || colors.length === 0) {
-    paleta = PALETA_ARCOIRIS;
-  } else {
-    paleta = [];
-    for (let i = 0; i < 10; i++) {
-      paleta.push(colors[i % colors.length]);
-    }
-  }
-
   const radios = [20, 17, 19, 15, 18, 16, 18, 14, 17, 15];
-  const cantidad = esMobileState ? 6 : 10;
-
-  const stdDeviation = esMobileState ? 4 : 7;
-  const alphaA = esMobileState ? 10 : 12;
-  const alphaB = esMobileState ? -5 : -6;
-  const softBlur = 2.5;
 
   return (
-    <>
-      <div
-        aria-hidden
-        className="fixed inset-0 overflow-hidden pointer-events-none"
-        style={{ background: "#0a0612", zIndex: -1 }}
+    <div
+      aria-hidden
+      className="fixed inset-0 overflow-hidden pointer-events-none"
+      style={{ background: "#0a0612", zIndex: -1 }}
+    >
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid slice"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        <svg
-          className="absolute inset-0 w-full h-full"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="xMidYMid slice"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <filter id="goo" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation={stdDeviation} result="blur" />
-              <feColorMatrix
-                in="blur"
-                mode="matrix"
-                values={`1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 ${alphaA} ${alphaB}`}
-                result="goo"
-              />
-              <feGaussianBlur in="goo" stdDeviation={softBlur} />
-            </filter>
-          </defs>
-
-          <g filter="url(#goo)" style={{ opacity: intensity }}>
-            {Array.from({ length: cantidad }).map((_, i) => (
-              <circle
-                key={i}
-                ref={(el) => { blobs.current[i] = el; }}
-                cx="50"
-                cy="50"
-                r={radios[i]}
-                fill={paleta[i]}
-              />
-            ))}
-          </g>
-        </svg>
-
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.4 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")",
-            opacity: 0.08,
-            mixBlendMode: "overlay",
-          }}
-        />
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
-
-      {/* Botón flotante de giroscopio para iOS (persistente hasta que el user lo active) */}
-      {mostrarBotonGiro && !giroActivo && (
-        <button
-          onClick={pedirPermisoGiro}
-          className="fixed top-4 right-4 z-50 bg-white/15 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 text-xs font-meta font-bold text-white pointer-events-auto"
-          aria-label="Activar movimiento del fondo con giroscopio"
-        >
-          🌀 Mover con teléfono
-        </button>
-      )}
-    </>
+        <defs>
+          <filter id="goo" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+            <feColorMatrix
+              in="blur"
+              mode="matrix"
+              values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 12 -6"
+              result="goo"
+            />
+            <feGaussianBlur in="goo" stdDeviation="2.5" />
+          </filter>
+        </defs>
+        <g filter="url(#goo)" style={{ opacity: intensity }}>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <circle
+              key={i}
+              ref={(el) => { blobs.current[i] = el; }}
+              cx="50"
+              cy="50"
+              r={radios[i]}
+              fill={paleta[i]}
+            />
+          ))}
+        </g>
+      </svg>
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.4 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")",
+          opacity: 0.08,
+          mixBlendMode: "overlay",
+        }}
+      />
+      <div className="absolute inset-0 bg-black/40" />
+    </div>
   );
 }

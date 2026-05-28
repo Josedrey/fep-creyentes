@@ -27,20 +27,20 @@ export const PREGUNTAS: Pregunta[] = [
     texto: "Cuando escuchas a tu artista favoritx, ¿qué sientes?",
     opciones: [
       { texto: "Energía que tengo que sacar del cuerpo", puntos: { Rebelde: 2, Bufon: 1 } },
-      { texto: "Melancolía profunda, casi placentera", puntos: { Amante: 2, Creador: 1 } },
-      { texto: "Ganas de bailar con lo que sea", puntos: { Bufon: 2, Rebelde: 1 } },
-      { texto: "Conexión con algo más grande que yo", puntos: { Mago: 2, Amante: 1 } },
+      { texto: "Melancolía profunda", puntos: { Amante: 2, Creador: 1 } },
+      { texto: "Ganas de bailar hasta el himno nacional", puntos: { Bufon: 2, Rebelde: 1 } },
+      { texto: "Siento que sintonizo con algo más grande que yo", puntos: { Mago: 2, Amante: 1 } },
     ],
   },
   {
     id: 2,
-    texto: "Solo unx headliner del FEP 2026. ¿Cuál?",
+    texto: "Solo puedes escoger unx headliner del FEP 2026. ¿Cuál?",
     opciones: [
-      { texto: "Tyler, the Creator", puntos: { Creador: 2, Rebelde: 1 } },
-      { texto: "Peso Pluma", puntos: { Bufon: 2, Rebelde: 1 } },
-      { texto: "Djo", puntos: { Amante: 2, Mago: 1 } },
-      { texto: "KATSEYE", puntos: { Bufon: 2, Explorador: 1 } },
-      { texto: "Ana Tijoux", puntos: { Mago: 2, Creador: 1 } },
+      { texto: "The Killers", puntos: { Creador: 2, Rebelde: 1 } },
+      { texto: "Deftones", puntos: { Bufon: 2, Rebelde: 1 } },
+      { texto: "Sabrina Carpenter", puntos: { Amante: 2, Mago: 1 } },
+      { texto: "Tyler, the creator", puntos: { Bufon: 2, Explorador: 1 } },
+      { texto: "Skrillex", puntos: { Mago: 2, Creador: 1 } },
     ],
   },
   {
@@ -48,9 +48,9 @@ export const PREGUNTAS: Pregunta[] = [
     texto: "Con tu grupo, ¿cómo se vive la música?",
     opciones: [
       { texto: "Cada unx por su lado pero conectados", puntos: { Explorador: 2, Creador: 1 } },
-      { texto: "Es nuestro idioma propio, en código", puntos: { Mago: 2, Amante: 1 } },
+      { texto: "Es nuestro idioma propio", puntos: { Mago: 2, Amante: 1 } },
       { texto: "Es la excusa para todo lo demás", puntos: { Bufon: 2, Rebelde: 1 } },
-      { texto: "Es el latido común, lo sentimos juntxs", puntos: { Amante: 2, Bufon: 1 } },
+      { texto: "Es el latido común", puntos: { Amante: 2, Bufon: 1 } },
     ],
   },
   {
