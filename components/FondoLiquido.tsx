@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 type Props = {
   colors?: string[];
   intensity?: number;
-  // Si true (default), usa paleta arcoíris fija. Si false, usa colors prop tal cual (para resultado/recorrido)
   arcoiris?: boolean;
 };
 
@@ -14,18 +13,19 @@ const esMobile = () => {
   return /Mobi|Android|iPad|iPhone|iPod/.test(navigator.userAgent);
 };
 
-// Paleta arcoíris curada para el FEP: saturados, no primarios, mezcla bien
+// Paleta arcoíris INTERCALADA: fuertes y suaves se alternan para que el goo no "se coma" colores
+// Antes ordenados por hue, ahora intercalados a propósito
 const PALETA_ARCOIRIS = [
-  "#D4145A", // magenta amante
-  "#FF2D2D", // rojo rebelde
-  "#FFD60A", // amarillo bufón
-  "#39FF14", // verde lima explorador
-  "#7B2CBF", // violeta mago
-  "#00E0FF", // cian creador
-  "#FF6B35", // naranja eléctrico (extra)
-  "#FF1493", // rosa intenso (extra)
-  "#9D4EDD", // lavanda (extra)
-  "#06FFA5", // mint (extra)
+  "#FFD60A", // amarillo
+  "#7B2CBF", // violeta
+  "#39FF14", // verde lima
+  "#FF2D2D", // rojo
+  "#00E0FF", // cian
+  "#FF6B35", // naranja
+  "#06FFA5", // mint
+  "#D4145A", // magenta
+  "#9D4EDD", // lavanda
+  "#FF1493", // rosa
 ];
 
 export default function FondoLiquido({
@@ -34,30 +34,38 @@ export default function FondoLiquido({
   arcoiris = true,
 }: Props) {
   const blobs = useRef<(SVGCircleElement | null)[]>(Array(10).fill(null));
-  const targetRef = useRef({ x: 0.5, y: 0.5 });
-  const currentRef = useRef({ x: 0.5, y: 0.5 });
+  // Perturbación por mouse/giroscopio (offset suave, no posición absoluta)
+  const perturbacionRef = useRef({ x: 0, y: 0 });
+  const perturbacionActualRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
   const tRef = useRef(0);
   const ultimaInteraccionRef = useRef(0);
+  const [esMobileState, setEsMobileState] = useState(false);
   const [mostrarPermisoIOS, setMostrarPermisoIOS] = useState(false);
 
   useEffect(() => {
     const mobile = esMobile();
+    setEsMobileState(mobile);
 
     const handleMove = (e: PointerEvent) => {
       ultimaInteraccionRef.current = performance.now();
       const w = window.innerWidth;
       const h = window.innerHeight;
-      targetRef.current = { x: e.clientX / w, y: e.clientY / h };
+      // Mouse aporta perturbación, NO posición absoluta. Max ±0.15 desde el centro.
+      perturbacionRef.current = {
+        x: (e.clientX / w - 0.5) * 0.3,
+        y: (e.clientY / h - 0.5) * 0.3,
+      };
     };
 
     const handleOrientation = (e: DeviceOrientationEvent) => {
       ultimaInteraccionRef.current = performance.now();
       const gamma = e.gamma ?? 0;
       const beta = e.beta ?? 0;
-      const x = 0.5 + Math.max(-30, Math.min(30, gamma)) / 80;
-      const y = 0.5 + Math.max(-30, Math.min(30, (beta - 30))) / 80;
-      targetRef.current = { x, y };
+      perturbacionRef.current = {
+        x: Math.max(-30, Math.min(30, gamma)) / 200,
+        y: Math.max(-30, Math.min(30, (beta - 30))) / 200,
+      };
     };
 
     if (mobile) {
@@ -81,41 +89,48 @@ export default function FondoLiquido({
       const ahora = performance.now();
       const sinInteractuar = ahora - ultimaInteraccionRef.current > 2000;
 
+      // Si no hay input desde hace 2s, decae la perturbación a 0 suavemente
       if (sinInteractuar) {
-        targetRef.current = {
-          x: 0.5 + Math.cos(tRef.current * 0.4) * 0.15,
-          y: 0.5 + Math.sin(tRef.current * 0.3) * 0.15,
-        };
+        perturbacionRef.current.x *= 0.98;
+        perturbacionRef.current.y *= 0.98;
       }
 
-      currentRef.current.x += (targetRef.current.x - currentRef.current.x) * 0.05;
-      currentRef.current.y += (targetRef.current.y - currentRef.current.y) * 0.05;
+      // Interpolación suave de la perturbación
+      perturbacionActualRef.current.x += (perturbacionRef.current.x - perturbacionActualRef.current.x) * 0.04;
+      perturbacionActualRef.current.y += (perturbacionRef.current.y - perturbacionActualRef.current.y) * 0.04;
 
-      const { x, y } = currentRef.current;
+      const pX = perturbacionActualRef.current.x;
+      const pY = perturbacionActualRef.current.y;
       const t = tRef.current;
 
-      // 10 órbitas distribuidas en círculo amplio para cubrir más pantalla y evitar pegoteo central
+      // Cada blob tiene su propia órbita amplia y su propio offset base
+      // El "centro" base de cada blob ya es disperso (no todos parten del mismo punto)
+      // El mouse solo agrega un pequeño shift global
       const orbits = [
-        { dx: 0,     dy: 0,     sp: 0.7,  ph: 0,    rad: 0.12 },
-        { dx: 35,    dy: -28,   sp: 0.6,  ph: 0.8,  rad: 0.18 },
-        { dx: -35,   dy: 28,    sp: 0.55, ph: 1.6,  rad: 0.18 },
-        { dx: 30,    dy: 30,    sp: 0.75, ph: 2.4,  rad: 0.16 },
-        { dx: -30,   dy: -30,   sp: 0.65, ph: 3.2,  rad: 0.16 },
-        { dx: 45,    dy: 5,     sp: 0.5,  ph: 4.0,  rad: 0.2  },
-        { dx: -45,   dy: -5,    sp: 0.8,  ph: 4.8,  rad: 0.2  },
-        { dx: 5,     dy: -42,   sp: 0.7,  ph: 5.6,  rad: 0.17 },
-        { dx: -5,    dy: 42,    sp: 0.6,  ph: 6.4,  rad: 0.17 },
-        { dx: 25,    dy: -10,   sp: 0.85, ph: 7.2,  rad: 0.14 },
+        { baseX: 50, baseY: 50, sp: 0.6,  ph: 0.0, rad: 18 },
+        { baseX: 78, baseY: 28, sp: 0.5,  ph: 0.7, rad: 16 },
+        { baseX: 22, baseY: 72, sp: 0.55, ph: 1.4, rad: 18 },
+        { baseX: 80, baseY: 70, sp: 0.65, ph: 2.1, rad: 14 },
+        { baseX: 20, baseY: 30, sp: 0.7,  ph: 2.8, rad: 16 },
+        { baseX: 50, baseY: 18, sp: 0.55, ph: 3.5, rad: 17 },
+        { baseX: 50, baseY: 85, sp: 0.6,  ph: 4.2, rad: 15 },
+        { baseX: 88, baseY: 50, sp: 0.5,  ph: 4.9, rad: 18 },
+        { baseX: 12, baseY: 50, sp: 0.65, ph: 5.6, rad: 16 },
+        { baseX: 50, baseY: 50, sp: 0.75, ph: 6.3, rad: 13 },
       ];
 
-      orbits.forEach((o, i) => {
+      // En mobile usar solo los primeros 6 blobs para perf
+      const cantidad = mobile ? 6 : 10;
+
+      for (let i = 0; i < cantidad; i++) {
+        const o = orbits[i];
         const blob = blobs.current[i];
-        if (!blob) return;
-        const cx = x * 100 + o.dx + Math.cos(t * o.sp + o.ph) * (o.rad * 100);
-        const cy = y * 100 + o.dy + Math.sin(t * o.sp * 0.9 + o.ph) * (o.rad * 100);
+        if (!blob) continue;
+        const cx = o.baseX + Math.cos(t * o.sp + o.ph) * o.rad + pX * 100;
+        const cy = o.baseY + Math.sin(t * o.sp * 0.9 + o.ph) * o.rad + pY * 100;
         blob.setAttribute("cx", `${cx}`);
         blob.setAttribute("cy", `${cy}`);
-      });
+      }
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -140,9 +155,10 @@ export default function FondoLiquido({
             ultimaInteraccionRef.current = performance.now();
             const gamma = e.gamma ?? 0;
             const beta = e.beta ?? 0;
-            const x = 0.5 + Math.max(-30, Math.min(30, gamma)) / 80;
-            const y = 0.5 + Math.max(-30, Math.min(30, (beta - 30))) / 80;
-            targetRef.current = { x, y };
+            perturbacionRef.current = {
+              x: Math.max(-30, Math.min(30, gamma)) / 200,
+              y: Math.max(-30, Math.min(30, (beta - 30))) / 200,
+            };
           });
         } else {
           localStorage.setItem("fep_giro_permiso", "denied");
@@ -159,20 +175,24 @@ export default function FondoLiquido({
     setMostrarPermisoIOS(false);
   }
 
-  // Decidir paleta: arcoíris si así se pide o si no hay colores específicos
+  // Decidir paleta
   let paleta: string[];
   if (arcoiris || !colors || colors.length === 0) {
     paleta = PALETA_ARCOIRIS;
   } else {
-    // Modo grupo: rellenar con los colores del grupo, repetidos si son pocos, para tener 10
     paleta = [];
     for (let i = 0; i < 10; i++) {
       paleta.push(colors[i % colors.length]);
     }
   }
 
-  // Radios variados para que no todos sean iguales
-  const radios = [22, 18, 20, 16, 19, 17, 21, 15, 19, 16];
+  const radios = [20, 17, 19, 15, 18, 16, 18, 14, 17, 15];
+  const cantidad = esMobileState ? 6 : 10;
+
+  // Blur ajustado por dispositivo para perf
+  const stdDeviation = esMobileState ? 4 : 7;
+  const colorMatrixAlpha = esMobileState ? "10 -5" : "12 -6";
+  const softBlur = 2.5;
 
   return (
     <>
@@ -188,24 +208,23 @@ export default function FondoLiquido({
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            {/* Goo + soft: blur grande + alpha menos extremo + soft blur final = bordes orgánicos no duros */}
             <filter id="goo" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation={stdDeviation} result="blur" />
               <feColorMatrix
                 in="blur"
                 mode="matrix"
-                values="1 0 0 0 0
+                values={`1 0 0 0 0
                         0 1 0 0 0
                         0 0 1 0 0
-                        0 0 0 14 -7"
+                        0 0 0 ${colorMatrixAlpha.split(" ")[0]} ${colorMatrixAlpha.split(" ")[1]}`}
                 result="goo"
               />
-              <feGaussianBlur in="goo" stdDeviation="1.5" />
+              <feGaussianBlur in="goo" stdDeviation={softBlur} />
             </filter>
           </defs>
 
           <g filter="url(#goo)" style={{ opacity: intensity }}>
-            {Array.from({ length: 10 }).map((_, i) => (
+            {Array.from({ length: cantidad }).map((_, i) => (
               <circle
                 key={i}
                 ref={(el) => { blobs.current[i] = el; }}
@@ -218,7 +237,6 @@ export default function FondoLiquido({
           </g>
         </svg>
 
-        {/* Grano sutil */}
         <div
           className="absolute inset-0"
           style={{
