@@ -29,7 +29,6 @@ export default function FondoLiquido({
     setEsMobile(detectarMobile());
   }, []);
 
-  // Resolver paleta
   let paleta: string[];
   if (arcoiris || !colors || colors.length === 0) {
     paleta = PALETA_ARCOIRIS;
@@ -38,35 +37,34 @@ export default function FondoLiquido({
     for (let i = 0; i < 10; i++) paleta.push(colors[i % colors.length]);
   }
 
-  // Mientras detecta, fondo base (evita parpadeo)
   if (esMobile === null) {
-    return (
-      <div
-        aria-hidden
-        className="fixed inset-0 -z-10"
-        style={{ background: "#0a0612" }}
-      />
-    );
+    return <div aria-hidden className="fixed inset-0 -z-10" style={{ background: "#0a0612" }} />;
   }
 
-  // ====== VERSIÓN MÓVIL: gradiente animado liviano ======
   if (esMobile) {
     return <FondoMobile paleta={paleta} intensity={intensity} />;
   }
 
-  // ====== VERSIÓN DESKTOP: goo filter completo ======
   return <FondoDesktop paleta={paleta} intensity={intensity} />;
 }
 
-// ---------- Mobile: CSS gradients animados, sin SVG filter ----------
+// ---------- Mobile: 2 capas de gradientes en movimiento opuesto ----------
 function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: number }) {
-  // Usar 4-5 colores para los gradientes
   const c = paleta;
-  const grad1 = `radial-gradient(circle at 20% 25%, ${c[0]}, transparent 45%)`;
-  const grad2 = `radial-gradient(circle at 80% 20%, ${c[1]}, transparent 45%)`;
-  const grad3 = `radial-gradient(circle at 25% 80%, ${c[2]}, transparent 45%)`;
-  const grad4 = `radial-gradient(circle at 75% 75%, ${c[3] || c[0]}, transparent 45%)`;
-  const grad5 = `radial-gradient(circle at 50% 50%, ${c[4] || c[1]}, transparent 50%)`;
+
+  // Capa A: 3 gradientes
+  const capaA = [
+    `radial-gradient(circle at 25% 30%, ${c[0]}, transparent 40%)`,
+    `radial-gradient(circle at 75% 25%, ${c[1]}, transparent 40%)`,
+    `radial-gradient(circle at 50% 70%, ${c[2]}, transparent 45%)`,
+  ].join(", ");
+
+  // Capa B: otros 3 gradientes, posiciones distintas
+  const capaB = [
+    `radial-gradient(circle at 80% 75%, ${c[3] || c[0]}, transparent 40%)`,
+    `radial-gradient(circle at 20% 80%, ${c[4] || c[1]}, transparent 40%)`,
+    `radial-gradient(circle at 60% 40%, ${c[5] || c[2]}, transparent 42%)`,
+  ].join(", ");
 
   return (
     <div
@@ -75,24 +73,46 @@ function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: numbe
       style={{ background: "#0a0612" }}
     >
       <div
-        className="absolute inset-0 fep-aurora"
+        className="absolute fep-capaA"
         style={{
-          background: `${grad1}, ${grad2}, ${grad3}, ${grad4}, ${grad5}`,
-          backgroundColor: "#0a0612",
+          inset: "-30%",
+          background: capaA,
           opacity: intensity,
-          filter: "blur(30px)",
+          filter: "blur(40px)",
+        }}
+      />
+      <div
+        className="absolute fep-capaB"
+        style={{
+          inset: "-30%",
+          background: capaB,
+          opacity: intensity * 0.9,
+          filter: "blur(45px)",
+          mixBlendMode: "screen",
         }}
       />
       <div className="absolute inset-0 bg-black/35" />
       <style>{`
-        @keyframes fepAurora {
-          0%   { transform: scale(1.1) translate(0%, 0%); }
-          33%  { transform: scale(1.25) translate(-4%, 3%); }
-          66%  { transform: scale(1.15) translate(3%, -3%); }
-          100% { transform: scale(1.1) translate(0%, 0%); }
+        @keyframes fepCapaA {
+          0%   { transform: translate(0%, 0%) rotate(0deg) scale(1.2); }
+          25%  { transform: translate(8%, -6%) rotate(3deg) scale(1.3); }
+          50%  { transform: translate(-5%, 8%) rotate(-2deg) scale(1.25); }
+          75%  { transform: translate(6%, 5%) rotate(2deg) scale(1.35); }
+          100% { transform: translate(0%, 0%) rotate(0deg) scale(1.2); }
         }
-        .fep-aurora {
-          animation: fepAurora 14s ease-in-out infinite;
+        @keyframes fepCapaB {
+          0%   { transform: translate(0%, 0%) rotate(0deg) scale(1.3); }
+          25%  { transform: translate(-8%, 6%) rotate(-3deg) scale(1.2); }
+          50%  { transform: translate(7%, -7%) rotate(2deg) scale(1.35); }
+          75%  { transform: translate(-6%, -4%) rotate(-2deg) scale(1.25); }
+          100% { transform: translate(0%, 0%) rotate(0deg) scale(1.3); }
+        }
+        .fep-capaA {
+          animation: fepCapaA 9s ease-in-out infinite;
+          will-change: transform;
+        }
+        .fep-capaB {
+          animation: fepCapaB 11s ease-in-out infinite;
           will-change: transform;
         }
       `}</style>
@@ -100,7 +120,7 @@ function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: numbe
   );
 }
 
-// ---------- Desktop: SVG goo filter con blobs siguiendo el mouse suavemente ----------
+// ---------- Desktop: goo filter ----------
 function FondoDesktop({ paleta, intensity }: { paleta: string[]; intensity: number }) {
   const blobs = useRef<(SVGCircleElement | null)[]>(Array(10).fill(null));
   const perturbacionRef = useRef({ x: 0, y: 0 });
