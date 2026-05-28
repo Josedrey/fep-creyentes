@@ -107,7 +107,7 @@ export default function Recorrido() {
       <>
         <FondoLiquido />
         <main className="min-h-screen flex items-center justify-center">
-          <p className="eyebrow">CARGANDO RECORRIDO...</p>
+          <p className="eyebrow">Cargando recorrido</p>
         </main>
       </>
     );
@@ -122,7 +122,6 @@ export default function Recorrido() {
   const canje = codigoCanje(sala.id);
   const patron = generarPatronQR(canje);
 
-  // Convertir paradas a formato MapaFEP con coordenadas
   const paradasMapa: ParadaMapa[] = recorrido.paradas.map((p) => ({
     tarima: `Tarima ${p.tarima}`,
     razon: p.razon,
@@ -132,11 +131,13 @@ export default function Recorrido() {
 
   return (
     <>
-      <FondoLiquido colors={colores} intensity={0.5} />
+      <FondoLiquido colors={colores} intensity={0.55} />
       <main className="min-h-screen">
-        <div className="max-w-md mx-auto p-6 pt-12 pb-12 flex flex-col gap-8">
+        {/* Contenedor exterior ancho en desktop, mapa puede aprovecharlo */}
+        <div className="max-w-3xl mx-auto p-6 pt-12 pb-12 flex flex-col gap-8">
 
-          <div className="flex flex-col gap-2 fade-up">
+          {/* Texto en columna estrecha */}
+          <div className="max-w-md mx-auto w-full flex flex-col gap-2 fade-up">
             <p className="eyebrow">Su recorrido en el FEP</p>
             <h1
               className={`${claseArquetipo(dominante)} leading-[0.95]`}
@@ -146,18 +147,17 @@ export default function Recorrido() {
             </h1>
           </div>
 
-          {/* Manifiesto sin línea lateral */}
-          <p className="font-body font-light text-base text-white/85 leading-relaxed fade-up-delay-1">
+          <p className="max-w-md mx-auto w-full font-body font-light text-base text-white/85 leading-relaxed fade-up-delay-1">
             {recorrido.manifiesto}
           </p>
 
-          {/* Mapa con paradas */}
-          <div className="flex flex-col gap-3 fade-up-delay-1">
-            <p className="eyebrow">Su mapa</p>
+          {/* Mapa: ancho completo del contenedor (~672px en desktop) */}
+          <div className="flex flex-col gap-3 fade-up-delay-1 w-full">
+            <p className="eyebrow max-w-md mx-auto w-full">Su mapa</p>
             <MapaFEP paradas={paradasMapa} colorAcento={colorGrupal} />
           </div>
 
-          <div className="flex flex-col gap-2 fade-up-delay-2">
+          <div className="max-w-md mx-auto w-full flex flex-col gap-2 fade-up-delay-2">
             <p className="eyebrow">Ritual grupal</p>
             <div
               className="rounded-2xl p-4 border"
@@ -167,14 +167,14 @@ export default function Recorrido() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 fade-up-delay-2">
+          <div className="max-w-md mx-auto w-full flex flex-col gap-2 fade-up-delay-2">
             <p className="eyebrow">Consejo</p>
             <p className="font-body italic font-light text-base text-white/85 leading-relaxed">
               “{recorrido.consejo}”
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 mt-2 fade-up-delay-3">
+          <div className="max-w-md mx-auto w-full flex flex-col gap-3 mt-2 fade-up-delay-3">
             <p className="eyebrow">Canje en el festival</p>
             {!mostrarCanje ? (
               <button onClick={() => setMostrarCanje(true)} className="btn-primary w-full">
@@ -190,7 +190,7 @@ export default function Recorrido() {
                   </svg>
                 </div>
                 <div className="text-center">
-                  <p className="font-meta text-xs tracking-[0.3em] text-black/60 font-semibold uppercase">Código</p>
+                  <p className="font-meta text-xs tracking-[0.08em] text-black/60 font-bold uppercase">Código</p>
                   <p className="font-acento text-3xl tracking-[0.15em] mt-1">{canje}</p>
                 </div>
                 <p className="text-xs text-black/60 text-center leading-relaxed px-2 font-body">
@@ -203,7 +203,7 @@ export default function Recorrido() {
             )}
           </div>
 
-          <button onClick={() => router.push("/")} className="text-white/50 text-sm underline underline-offset-4 mt-4 font-body">
+          <button onClick={() => router.push("/")} className="text-white/50 text-sm underline underline-offset-4 mt-4 font-body max-w-md mx-auto w-full text-center">
             Cerrar experiencia
           </button>
         </div>
