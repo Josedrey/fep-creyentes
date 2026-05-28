@@ -15,10 +15,9 @@
   --font-body: var(--font-nunito), system-ui, sans-serif;
   --font-arquetipo: var(--font-rubik), system-ui, sans-serif;
   --font-acento: var(--font-bagel), Impact, sans-serif;
+  --font-meta: var(--font-quicksand), system-ui, sans-serif;
 }
 
-/* FIX FONDO: el body NO debe tener background, solo el html (fallback).
-   Si el body lo tiene, tapa los elementos con z-index negativo del FondoLiquido. */
 html {
   background: var(--color-base);
   overscroll-behavior: none;
@@ -30,7 +29,7 @@ body {
   color: #fff;
   font-family: var(--font-body);
   font-weight: 300;
-  background: transparent; /* CRÍTICO: para que se vea el FondoLiquido */
+  background: transparent;
 }
 
 button {
@@ -42,8 +41,14 @@ button {
 .font-body { font-family: var(--font-body); }
 .font-arquetipo { font-family: var(--font-arquetipo); }
 .font-acento { font-family: var(--font-acento); }
+.font-meta { font-family: var(--font-meta); }
 
-/* === 6 personalidades de Rubik para los arquetipos === */
+/* Para títulos de paradas, no Bagel */
+.font-parada {
+  font-family: var(--font-arquetipo);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
 
 .arq-amante {
   font-family: var(--font-arquetipo);
@@ -51,33 +56,28 @@ button {
   font-style: italic;
   letter-spacing: 0;
 }
-
 .arq-rebelde {
   font-family: var(--font-arquetipo);
   font-weight: 900;
   letter-spacing: -0.03em;
   text-transform: uppercase;
 }
-
 .arq-bufon {
   font-family: var(--font-arquetipo);
   font-weight: 800;
   letter-spacing: 0;
 }
-
 .arq-explorador {
   font-family: var(--font-arquetipo);
   font-weight: 300;
   letter-spacing: 0.12em;
 }
-
 .arq-mago {
   font-family: var(--font-arquetipo);
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
 }
-
 .arq-creador {
   font-family: var(--font-arquetipo);
   font-weight: 700;
@@ -85,7 +85,6 @@ button {
   letter-spacing: -0.02em;
 }
 
-/* === Botones === */
 .btn-primary {
   font-family: var(--font-body);
   font-weight: 700;
@@ -98,9 +97,7 @@ button {
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 .btn-primary:active:not(:disabled) { transform: scale(0.97); }
-.btn-primary:not(:disabled):hover {
-  box-shadow: 0 0 40px 0 rgba(255,255,255,0.25);
-}
+.btn-primary:not(:disabled):hover { box-shadow: 0 0 40px 0 rgba(255,255,255,0.25); }
 .btn-primary:disabled { opacity: 0.25; cursor: not-allowed; }
 
 .btn-ghost {
@@ -121,7 +118,6 @@ button {
   border-color: rgba(255,255,255,0.5);
 }
 
-/* === Inputs === */
 .input-ritual {
   font-family: var(--font-body);
   font-weight: 400;
@@ -145,17 +141,16 @@ button {
   font-weight: 300;
 }
 
-/* === Eyebrow === */
+/* Eyebrow ahora con Quicksand */
 .eyebrow {
-  font-family: var(--font-body);
+  font-family: var(--font-meta);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.7);
 }
 
-/* === Animaciones === */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }

@@ -9,6 +9,7 @@ import {
 } from "@/lib/calculo";
 import { RECORRIDOS } from "@/lib/recorridos";
 import FondoLiquido from "@/components/FondoLiquido";
+import MapaFEP, { type ParadaMapa } from "@/components/MapaFEP";
 
 const claseArquetipo = (arq: Arquetipo): string => {
   const map: Record<Arquetipo, string> = {
@@ -16,6 +17,18 @@ const claseArquetipo = (arq: Arquetipo): string => {
     Explorador: "arq-explorador", Mago: "arq-mago", Creador: "arq-creador",
   };
   return map[arq];
+};
+
+// === COORDENADAS DE TARIMAS EN EL MAPA ===
+// Ajusta estos valores % (x: izquierda, y: arriba) después de poner tu mapa-fep.jpg
+// para que los puntos caigan sobre cada tarima en la imagen.
+// Trial-and-error: cambia los números, recarga, ajusta.
+const COORDS_TARIMAS: Record<string, { x: number; y: number }> = {
+  "Adidas":           { x: 50, y: 35 },
+  "Johnnie Walker":   { x: 30, y: 55 },
+  "Budweiser":        { x: 70, y: 50 },
+  "Corona Sunsets":   { x: 25, y: 75 },
+  "Anonymous Music":  { x: 75, y: 75 },
 };
 
 function codigoCanje(salaId: string): string {
@@ -109,9 +122,17 @@ export default function Recorrido() {
   const canje = codigoCanje(sala.id);
   const patron = generarPatronQR(canje);
 
+  // Convertir paradas a formato MapaFEP con coordenadas
+  const paradasMapa: ParadaMapa[] = recorrido.paradas.map((p) => ({
+    tarima: `Tarima ${p.tarima}`,
+    razon: p.razon,
+    x: COORDS_TARIMAS[p.tarima]?.x ?? 50,
+    y: COORDS_TARIMAS[p.tarima]?.y ?? 50,
+  }));
+
   return (
     <>
-      <FondoLiquido colors={colores} intensity={0.4} />
+      <FondoLiquido colors={colores} intensity={0.5} />
       <main className="min-h-screen">
         <div className="max-w-md mx-auto p-6 pt-12 pb-12 flex flex-col gap-8">
 
@@ -125,30 +146,15 @@ export default function Recorrido() {
             </h1>
           </div>
 
-          <div className="border-l-2 pl-4 fade-up-delay-1" style={{ borderColor: colorGrupal }}>
-            <p className="font-body font-light text-base text-white/85 leading-relaxed">
-              {recorrido.manifiesto}
-            </p>
-          </div>
+          {/* Manifiesto sin línea lateral */}
+          <p className="font-body font-light text-base text-white/85 leading-relaxed fade-up-delay-1">
+            {recorrido.manifiesto}
+          </p>
 
+          {/* Mapa con paradas */}
           <div className="flex flex-col gap-3 fade-up-delay-1">
-            <p className="eyebrow">Paradas</p>
-            {recorrido.paradas.map((parada, idx) => (
-              <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex gap-4">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center font-acento text-base flex-shrink-0"
-                  style={{ backgroundColor: colorGrupal, color: "#000" }}
-                >
-                  {idx + 1}
-                </div>
-                <div className="flex-1">
-                  <p className="font-display text-2xl leading-tight">Tarima {parada.tarima}</p>
-                  <p className="font-body font-light text-sm text-white/70 leading-snug mt-1">
-                    {parada.razon}
-                  </p>
-                </div>
-              </div>
-            ))}
+            <p className="eyebrow">Su mapa</p>
+            <MapaFEP paradas={paradasMapa} colorAcento={colorGrupal} />
           </div>
 
           <div className="flex flex-col gap-2 fade-up-delay-2">
@@ -184,7 +190,7 @@ export default function Recorrido() {
                   </svg>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs tracking-[0.3em] text-black/60 font-body font-semibold">CÓDIGO</p>
+                  <p className="font-meta text-xs tracking-[0.3em] text-black/60 font-semibold uppercase">Código</p>
                   <p className="font-acento text-3xl tracking-[0.15em] mt-1">{canje}</p>
                 </div>
                 <p className="text-xs text-black/60 text-center leading-relaxed px-2 font-body">

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito, Rubik, Bagel_Fat_One } from "next/font/google";
+import { Nunito, Rubik, Bagel_Fat_One, Quicksand } from "next/font/google";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -24,6 +24,13 @@ const bagel = Bagel_Fat_One({
   display: "swap",
 });
 
+const quicksand = Quicksand({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-quicksand",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Iniciación de Creyentes — FEP 2026",
   description: "Encuentra la identidad sonora de tu grupo en el Festival Estéreo Picnic 2026.",
@@ -45,7 +52,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${nunito.variable} ${rubik.variable} ${bagel.variable}`}
+      className={`${nunito.variable} ${rubik.variable} ${bagel.variable} ${quicksand.variable}`}
     >
       <body className="min-h-screen antialiased font-body">
         {children}
