@@ -13,19 +13,17 @@ const esMobile = () => {
   return /Mobi|Android|iPad|iPhone|iPod/.test(navigator.userAgent);
 };
 
-// Paleta arcoíris INTERCALADA: fuertes y suaves se alternan para que el goo no "se coma" colores
-// Antes ordenados por hue, ahora intercalados a propósito
 const PALETA_ARCOIRIS = [
-  "#FFD60A", // amarillo
-  "#7B2CBF", // violeta
-  "#39FF14", // verde lima
-  "#FF2D2D", // rojo
-  "#00E0FF", // cian
-  "#FF6B35", // naranja
-  "#06FFA5", // mint
-  "#D4145A", // magenta
-  "#9D4EDD", // lavanda
-  "#FF1493", // rosa
+  "#FFD60A",
+  "#7B2CBF",
+  "#39FF14",
+  "#FF2D2D",
+  "#00E0FF",
+  "#FF6B35",
+  "#06FFA5",
+  "#D4145A",
+  "#9D4EDD",
+  "#FF1493",
 ];
 
 export default function FondoLiquido({
@@ -34,14 +32,14 @@ export default function FondoLiquido({
   arcoiris = true,
 }: Props) {
   const blobs = useRef<(SVGCircleElement | null)[]>(Array(10).fill(null));
-  // Perturbación por mouse/giroscopio (offset suave, no posición absoluta)
   const perturbacionRef = useRef({ x: 0, y: 0 });
   const perturbacionActualRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
   const tRef = useRef(0);
   const ultimaInteraccionRef = useRef(0);
   const [esMobileState, setEsMobileState] = useState(false);
-  const [mostrarPermisoIOS, setMostrarPermisoIOS] = useState(false);
+  const [mostrarBotonGiro, setMostrarBotonGiro] = useState(false);
+  const [giroActivo, setGiroActivo] = useState(false);
 
   useEffect(() => {
     const mobile = esMobile();
@@ -51,10 +49,10 @@ export default function FondoLiquido({
       ultimaInteraccionRef.current = performance.now();
       const w = window.innerWidth;
       const h = window.innerHeight;
-      // Mouse aporta perturbación, NO posición absoluta. Max ±0.15 desde el centro.
+      // Mouse: perturbación SUTIL. Max ±0.08 (era 0.3).
       perturbacionRef.current = {
-        x: (e.clientX / w - 0.5) * 0.3,
-        y: (e.clientY / h - 0.5) * 0.3,
+        x: (e.clientX / w - 0.5) * 0.08,
+        y: (e.clientY / h - 0.5) * 0.08,
       };
     };
 
@@ -63,22 +61,29 @@ export default function FondoLiquido({
       const gamma = e.gamma ?? 0;
       const beta = e.beta ?? 0;
       perturbacionRef.current = {
-        x: Math.max(-30, Math.min(30, gamma)) / 200,
-        y: Math.max(-30, Math.min(30, (beta - 30))) / 200,
+        x: Math.max(-30, Math.min(30, gamma)) / 400,
+        y: Math.max(-30, Math.min(30, (beta - 30))) / 400,
       };
     };
 
     if (mobile) {
       // @ts-expect-error - tipo no estándar
-      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-        const yaPedi = localStorage.getItem("fep_giro_permiso");
-        if (yaPedi === "granted") {
+      const necesitaPermiso = typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function";
+
+      if (necesitaPermiso) {
+        // iOS 13+
+        const ya = localStorage.getItem("fep_giro_permiso");
+        if (ya === "granted") {
           window.addEventListener("deviceorientation", handleOrientation);
-        } else if (yaPedi !== "denied") {
-          setMostrarPermisoIOS(true);
+          setGiroActivo(true);
+        } else {
+          // Siempre mostrar el botón si no se concedió aún - persistente, no se descarta
+          setMostrarBotonGiro(true);
         }
       } else {
+        // Android, iOS antiguos
         window.addEventListener("deviceorientation", handleOrientation);
+        setGiroActivo(true);
       }
     } else {
       window.addEventListener("pointermove", handleMove);
@@ -87,15 +92,14 @@ export default function FondoLiquido({
     const tick = () => {
       tRef.current += 0.004;
       const ahora = performance.now();
-      const sinInteractuar = ahora - ultimaInteraccionRef.current > 2000;
+      const sinInteractuar = ahora - ultimaInteraccionRef.current > 1500;
 
-      // Si no hay input desde hace 2s, decae la perturbación a 0 suavemente
       if (sinInteractuar) {
-        perturbacionRef.current.x *= 0.98;
-        perturbacionRef.current.y *= 0.98;
+        // Decay rápido de la perturbación cuando no hay input
+        perturbacionRef.current.x *= 0.96;
+        perturbacionRef.current.y *= 0.96;
       }
 
-      // Interpolación suave de la perturbación
       perturbacionActualRef.current.x += (perturbacionRef.current.x - perturbacionActualRef.current.x) * 0.04;
       perturbacionActualRef.current.y += (perturbacionRef.current.y - perturbacionActualRef.current.y) * 0.04;
 
@@ -103,9 +107,6 @@ export default function FondoLiquido({
       const pY = perturbacionActualRef.current.y;
       const t = tRef.current;
 
-      // Cada blob tiene su propia órbita amplia y su propio offset base
-      // El "centro" base de cada blob ya es disperso (no todos parten del mismo punto)
-      // El mouse solo agrega un pequeño shift global
       const orbits = [
         { baseX: 50, baseY: 50, sp: 0.6,  ph: 0.0, rad: 18 },
         { baseX: 78, baseY: 28, sp: 0.5,  ph: 0.7, rad: 16 },
@@ -119,7 +120,6 @@ export default function FondoLiquido({
         { baseX: 50, baseY: 50, sp: 0.75, ph: 6.3, rad: 13 },
       ];
 
-      // En mobile usar solo los primeros 6 blobs para perf
       const cantidad = mobile ? 6 : 10;
 
       for (let i = 0; i < cantidad; i++) {
@@ -156,26 +156,22 @@ export default function FondoLiquido({
             const gamma = e.gamma ?? 0;
             const beta = e.beta ?? 0;
             perturbacionRef.current = {
-              x: Math.max(-30, Math.min(30, gamma)) / 200,
-              y: Math.max(-30, Math.min(30, (beta - 30))) / 200,
+              x: Math.max(-30, Math.min(30, gamma)) / 400,
+              y: Math.max(-30, Math.min(30, (beta - 30))) / 400,
             };
           });
+          setGiroActivo(true);
+          setMostrarBotonGiro(false);
         } else {
           localStorage.setItem("fep_giro_permiso", "denied");
+          setMostrarBotonGiro(false);
         }
       } catch {
-        localStorage.setItem("fep_giro_permiso", "denied");
+        setMostrarBotonGiro(false);
       }
     }
-    setMostrarPermisoIOS(false);
   }
 
-  function rechazarPermiso() {
-    localStorage.setItem("fep_giro_permiso", "denied");
-    setMostrarPermisoIOS(false);
-  }
-
-  // Decidir paleta
   let paleta: string[];
   if (arcoiris || !colors || colors.length === 0) {
     paleta = PALETA_ARCOIRIS;
@@ -189,9 +185,9 @@ export default function FondoLiquido({
   const radios = [20, 17, 19, 15, 18, 16, 18, 14, 17, 15];
   const cantidad = esMobileState ? 6 : 10;
 
-  // Blur ajustado por dispositivo para perf
   const stdDeviation = esMobileState ? 4 : 7;
-  const colorMatrixAlpha = esMobileState ? "10 -5" : "12 -6";
+  const alphaA = esMobileState ? 10 : 12;
+  const alphaB = esMobileState ? -5 : -6;
   const softBlur = 2.5;
 
   return (
@@ -213,10 +209,7 @@ export default function FondoLiquido({
               <feColorMatrix
                 in="blur"
                 mode="matrix"
-                values={`1 0 0 0 0
-                        0 1 0 0 0
-                        0 0 1 0 0
-                        0 0 0 ${colorMatrixAlpha.split(" ")[0]} ${colorMatrixAlpha.split(" ")[1]}`}
+                values={`1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 ${alphaA} ${alphaB}`}
                 result="goo"
               />
               <feGaussianBlur in="goo" stdDeviation={softBlur} />
@@ -249,26 +242,15 @@ export default function FondoLiquido({
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      {mostrarPermisoIOS && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 bg-black/80 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col gap-3 max-w-md mx-auto">
-          <p className="font-meta text-sm text-white/90 leading-snug">
-            ¿Activar movimiento del fondo con tu teléfono? Inclínalo para mover los colores.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={pedirPermisoGiro}
-              className="flex-1 bg-white text-black font-body font-bold py-2 rounded-full text-sm"
-            >
-              Activar
-            </button>
-            <button
-              onClick={rechazarPermiso}
-              className="flex-1 border border-white/30 text-white font-body py-2 rounded-full text-sm"
-            >
-              No
-            </button>
-          </div>
-        </div>
+      {/* Botón flotante de giroscopio para iOS (persistente hasta que el user lo active) */}
+      {mostrarBotonGiro && !giroActivo && (
+        <button
+          onClick={pedirPermisoGiro}
+          className="fixed top-4 right-4 z-50 bg-white/15 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 text-xs font-meta font-bold text-white pointer-events-auto"
+          aria-label="Activar movimiento del fondo con giroscopio"
+        >
+          🌀 Mover con teléfono
+        </button>
       )}
     </>
   );
