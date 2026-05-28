@@ -131,7 +131,7 @@ export default function Recorrido() {
 
   return (
     <>
-      <FondoLiquido colors={colores} intensity={0.55} />
+      <FondoLiquido colors={colores} intensity={0.75} arcoiris={false} />
       <main className="min-h-screen">
         {/* Contenedor exterior ancho en desktop, mapa puede aprovecharlo */}
         <div className="max-w-3xl mx-auto p-6 pt-12 pb-12 flex flex-col gap-8">

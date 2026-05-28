@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 type Props = {
   colors?: string[];
   intensity?: number;
+  // Si true (default), usa paleta arcoíris fija. Si false, usa colors prop tal cual (para resultado/recorrido)
+  arcoiris?: boolean;
 };
 
 const esMobile = () => {
@@ -12,11 +14,26 @@ const esMobile = () => {
   return /Mobi|Android|iPad|iPhone|iPod/.test(navigator.userAgent);
 };
 
+// Paleta arcoíris curada para el FEP: saturados, no primarios, mezcla bien
+const PALETA_ARCOIRIS = [
+  "#D4145A", // magenta amante
+  "#FF2D2D", // rojo rebelde
+  "#FFD60A", // amarillo bufón
+  "#39FF14", // verde lima explorador
+  "#7B2CBF", // violeta mago
+  "#00E0FF", // cian creador
+  "#FF6B35", // naranja eléctrico (extra)
+  "#FF1493", // rosa intenso (extra)
+  "#9D4EDD", // lavanda (extra)
+  "#06FFA5", // mint (extra)
+];
+
 export default function FondoLiquido({
-  colors = ["#7B2CBF", "#D4145A", "#00E0FF"],
+  colors,
   intensity = 0.85,
+  arcoiris = true,
 }: Props) {
-  const blobs = useRef<(SVGCircleElement | null)[]>([null, null, null, null, null, null]);
+  const blobs = useRef<(SVGCircleElement | null)[]>(Array(10).fill(null));
   const targetRef = useRef({ x: 0.5, y: 0.5 });
   const currentRef = useRef({ x: 0.5, y: 0.5 });
   const rafRef = useRef<number | null>(null);
@@ -66,8 +83,8 @@ export default function FondoLiquido({
 
       if (sinInteractuar) {
         targetRef.current = {
-          x: 0.5 + Math.cos(tRef.current * 0.4) * 0.2,
-          y: 0.5 + Math.sin(tRef.current * 0.3) * 0.2,
+          x: 0.5 + Math.cos(tRef.current * 0.4) * 0.15,
+          y: 0.5 + Math.sin(tRef.current * 0.3) * 0.15,
         };
       }
 
@@ -77,15 +94,18 @@ export default function FondoLiquido({
       const { x, y } = currentRef.current;
       const t = tRef.current;
 
-      // 6 blobs orbitando alrededor del target con desfases
-      // Coordenadas en SVG viewBox 100x100
+      // 10 órbitas distribuidas en círculo amplio para cubrir más pantalla y evitar pegoteo central
       const orbits = [
-        { dx: 0,    dy: 0,    r: 22, sp: 0.8,  ph: 0,    rad: 0.18 },
-        { dx: 28,   dy: -22,  r: 18, sp: 0.7,  ph: 1.2,  rad: 0.15 },
-        { dx: -28,  dy: 22,   r: 20, sp: 0.55, ph: 2.4,  rad: 0.16 },
-        { dx: 22,   dy: 28,   r: 16, sp: 0.85, ph: 3.6,  rad: 0.14 },
-        { dx: -22,  dy: -28,  r: 19, sp: 0.65, ph: 4.8,  rad: 0.17 },
-        { dx: 0,    dy: 32,   r: 17, sp: 0.75, ph: 6.0,  rad: 0.15 },
+        { dx: 0,     dy: 0,     sp: 0.7,  ph: 0,    rad: 0.12 },
+        { dx: 35,    dy: -28,   sp: 0.6,  ph: 0.8,  rad: 0.18 },
+        { dx: -35,   dy: 28,    sp: 0.55, ph: 1.6,  rad: 0.18 },
+        { dx: 30,    dy: 30,    sp: 0.75, ph: 2.4,  rad: 0.16 },
+        { dx: -30,   dy: -30,   sp: 0.65, ph: 3.2,  rad: 0.16 },
+        { dx: 45,    dy: 5,     sp: 0.5,  ph: 4.0,  rad: 0.2  },
+        { dx: -45,   dy: -5,    sp: 0.8,  ph: 4.8,  rad: 0.2  },
+        { dx: 5,     dy: -42,   sp: 0.7,  ph: 5.6,  rad: 0.17 },
+        { dx: -5,    dy: 42,    sp: 0.6,  ph: 6.4,  rad: 0.17 },
+        { dx: 25,    dy: -10,   sp: 0.85, ph: 7.2,  rad: 0.14 },
       ];
 
       orbits.forEach((o, i) => {
@@ -139,14 +159,20 @@ export default function FondoLiquido({
     setMostrarPermisoIOS(false);
   }
 
-  const palette = [
-    colors[0],
-    colors[1] || colors[0],
-    colors[2] || colors[0],
-    colors[0],
-    colors[1] || colors[0],
-    colors[2] || colors[0],
-  ];
+  // Decidir paleta: arcoíris si así se pide o si no hay colores específicos
+  let paleta: string[];
+  if (arcoiris || !colors || colors.length === 0) {
+    paleta = PALETA_ARCOIRIS;
+  } else {
+    // Modo grupo: rellenar con los colores del grupo, repetidos si son pocos, para tener 10
+    paleta = [];
+    for (let i = 0; i < 10; i++) {
+      paleta.push(colors[i % colors.length]);
+    }
+  }
+
+  // Radios variados para que no todos sean iguales
+  const radios = [22, 18, 20, 16, 19, 17, 21, 15, 19, 16];
 
   return (
     <>
@@ -162,35 +188,31 @@ export default function FondoLiquido({
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            {/* Filter goo: blur grande + alpha steep = los blobs se fusionan al juntarse */}
-            <filter id="goo">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+            {/* Goo + soft: blur grande + alpha menos extremo + soft blur final = bordes orgánicos no duros */}
+            <filter id="goo" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
               <feColorMatrix
                 in="blur"
                 mode="matrix"
                 values="1 0 0 0 0
                         0 1 0 0 0
                         0 0 1 0 0
-                        0 0 0 22 -10"
+                        0 0 0 14 -7"
                 result="goo"
               />
-              <feBlend in="SourceGraphic" in2="goo" />
-            </filter>
-            {/* Suavizado final */}
-            <filter id="softBlur">
-              <feGaussianBlur stdDeviation="1.2" />
+              <feGaussianBlur in="goo" stdDeviation="1.5" />
             </filter>
           </defs>
 
           <g filter="url(#goo)" style={{ opacity: intensity }}>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
+            {Array.from({ length: 10 }).map((_, i) => (
               <circle
                 key={i}
                 ref={(el) => { blobs.current[i] = el; }}
                 cx="50"
                 cy="50"
-                r={[22, 18, 20, 16, 19, 17][i]}
-                fill={palette[i]}
+                r={radios[i]}
+                fill={paleta[i]}
               />
             ))}
           </g>
@@ -206,8 +228,7 @@ export default function FondoLiquido({
             mixBlendMode: "overlay",
           }}
         />
-        {/* Overlay para legibilidad sobre los colores saturados */}
-        <div className="absolute inset-0 bg-black/35" />
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
       {mostrarPermisoIOS && (
