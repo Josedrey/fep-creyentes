@@ -14,14 +14,14 @@ const esMobile = () => {
 
 export default function FondoLiquido({
   colors = ["#7B2CBF", "#D4145A", "#00E0FF"],
-  intensity = 0.7,
+  intensity = 0.85,
 }: Props) {
-  const blobs = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
+  const blobs = useRef<(SVGCircleElement | null)[]>([null, null, null, null, null, null]);
   const targetRef = useRef({ x: 0.5, y: 0.5 });
   const currentRef = useRef({ x: 0.5, y: 0.5 });
   const rafRef = useRef<number | null>(null);
   const tRef = useRef(0);
-  const ultimaInteraccionRef = useRef(0); // timestamp última interacción
+  const ultimaInteraccionRef = useRef(0);
   const [mostrarPermisoIOS, setMostrarPermisoIOS] = useState(false);
 
   useEffect(() => {
@@ -59,17 +59,15 @@ export default function FondoLiquido({
       window.addEventListener("pointermove", handleMove);
     }
 
-    // Loop de animación: SIEMPRE corre el orbital si llevan >2s sin interactuar
     const tick = () => {
       tRef.current += 0.004;
       const ahora = performance.now();
       const sinInteractuar = ahora - ultimaInteraccionRef.current > 2000;
 
       if (sinInteractuar) {
-        // Orbital constante - mueve el target en círculo amplio
         targetRef.current = {
-          x: 0.5 + Math.cos(tRef.current * 0.4) * 0.18,
-          y: 0.5 + Math.sin(tRef.current * 0.3) * 0.18,
+          x: 0.5 + Math.cos(tRef.current * 0.4) * 0.2,
+          y: 0.5 + Math.sin(tRef.current * 0.3) * 0.2,
         };
       }
 
@@ -79,21 +77,24 @@ export default function FondoLiquido({
       const { x, y } = currentRef.current;
       const t = tRef.current;
 
-      // 5 blobs distribuidos: el primero centrado, otros en cuadrantes
-      const offsets = [
-        { dx: 0,     dy: 0,     speed: 1.0 },
-        { dx: 0.25,  dy: -0.2,  speed: 0.8 },
-        { dx: -0.25, dy: 0.25,  speed: 0.6 },
-        { dx: 0.2,   dy: 0.25,  speed: 0.9 },
-        { dx: -0.25, dy: -0.25, speed: 0.7 },
+      // 6 blobs orbitando alrededor del target con desfases
+      // Coordenadas en SVG viewBox 100x100
+      const orbits = [
+        { dx: 0,    dy: 0,    r: 22, sp: 0.8,  ph: 0,    rad: 0.18 },
+        { dx: 28,   dy: -22,  r: 18, sp: 0.7,  ph: 1.2,  rad: 0.15 },
+        { dx: -28,  dy: 22,   r: 20, sp: 0.55, ph: 2.4,  rad: 0.16 },
+        { dx: 22,   dy: 28,   r: 16, sp: 0.85, ph: 3.6,  rad: 0.14 },
+        { dx: -22,  dy: -28,  r: 19, sp: 0.65, ph: 4.8,  rad: 0.17 },
+        { dx: 0,    dy: 32,   r: 17, sp: 0.75, ph: 6.0,  rad: 0.15 },
       ];
 
-      offsets.forEach((off, i) => {
+      orbits.forEach((o, i) => {
         const blob = blobs.current[i];
         if (!blob) return;
-        const px = (x + off.dx + Math.cos(t * off.speed + i * 1.7) * 0.1) * 100;
-        const py = (y + off.dy + Math.sin(t * off.speed * 0.9 + i * 2.1) * 0.1) * 100;
-        blob.style.transform = `translate(${px - 50}vw, ${py - 50}vh)`;
+        const cx = x * 100 + o.dx + Math.cos(t * o.sp + o.ph) * (o.rad * 100);
+        const cy = y * 100 + o.dy + Math.sin(t * o.sp * 0.9 + o.ph) * (o.rad * 100);
+        blob.setAttribute("cx", `${cx}`);
+        blob.setAttribute("cy", `${cy}`);
       });
 
       rafRef.current = requestAnimationFrame(tick);
@@ -144,10 +145,8 @@ export default function FondoLiquido({
     colors[2] || colors[0],
     colors[0],
     colors[1] || colors[0],
+    colors[2] || colors[0],
   ];
-  const sizes = ["160vmax", "130vmax", "140vmax", "120vmax", "150vmax"];
-  const blurs = ["60px", "65px", "60px", "70px", "65px"];
-  const opacityFactors = [1, 0.9, 0.85, 0.8, 0.75];
 
   return (
     <>
@@ -156,22 +155,48 @@ export default function FondoLiquido({
         className="fixed inset-0 overflow-hidden pointer-events-none"
         style={{ background: "#0a0612", zIndex: -1 }}
       >
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            ref={(el) => { blobs.current[i] = el; }}
-            className="absolute top-1/2 left-1/2 rounded-full"
-            style={{
-              width: sizes[i],
-              height: sizes[i],
-              background: `radial-gradient(circle at center, ${palette[i]} 0%, transparent 60%)`,
-              opacity: intensity * opacityFactors[i],
-              filter: `blur(${blurs[i]})`,
-              mixBlendMode: "screen",
-              willChange: "transform",
-            }}
-          />
-        ))}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="xMidYMid slice"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            {/* Filter goo: blur grande + alpha steep = los blobs se fusionan al juntarse */}
+            <filter id="goo">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+              <feColorMatrix
+                in="blur"
+                mode="matrix"
+                values="1 0 0 0 0
+                        0 1 0 0 0
+                        0 0 1 0 0
+                        0 0 0 22 -10"
+                result="goo"
+              />
+              <feBlend in="SourceGraphic" in2="goo" />
+            </filter>
+            {/* Suavizado final */}
+            <filter id="softBlur">
+              <feGaussianBlur stdDeviation="1.2" />
+            </filter>
+          </defs>
+
+          <g filter="url(#goo)" style={{ opacity: intensity }}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <circle
+                key={i}
+                ref={(el) => { blobs.current[i] = el; }}
+                cx="50"
+                cy="50"
+                r={[22, 18, 20, 16, 19, 17][i]}
+                fill={palette[i]}
+              />
+            ))}
+          </g>
+        </svg>
+
+        {/* Grano sutil */}
         <div
           className="absolute inset-0"
           style={{
@@ -181,7 +206,8 @@ export default function FondoLiquido({
             mixBlendMode: "overlay",
           }}
         />
-        <div className="absolute inset-0 bg-black/15" />
+        {/* Overlay para legibilidad sobre los colores saturados */}
+        <div className="absolute inset-0 bg-black/35" />
       </div>
 
       {mostrarPermisoIOS && (
