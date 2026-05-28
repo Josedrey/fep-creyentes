@@ -48,45 +48,26 @@ export default function FondoLiquido({
   return <FondoDesktop paleta={paleta} intensity={intensity} />;
 }
 
-// ---------- Mobile: 2 capas animadas por JS (iOS no pausa rAF) ----------
+// ---------- Mobile: gradiente cónico rotando sobre sí mismo (sin bordes visibles) ----------
 function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: number }) {
-  const capaARef = useRef<HTMLDivElement | null>(null);
-  const capaBRef = useRef<HTMLDivElement | null>(null);
+  const ruedaRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const tRef = useRef(0);
+  const angRef = useRef(0);
 
+  // Construir el conic-gradient con la paleta (cerrar el círculo repitiendo el primero)
   const c = paleta;
-  const capaA = [
-    `radial-gradient(circle at 25% 30%, ${c[0]}, transparent 40%)`,
-    `radial-gradient(circle at 75% 25%, ${c[1]}, transparent 40%)`,
-    `radial-gradient(circle at 50% 70%, ${c[2]}, transparent 45%)`,
-  ].join(", ");
-  const capaB = [
-    `radial-gradient(circle at 80% 75%, ${c[3] || c[0]}, transparent 40%)`,
-    `radial-gradient(circle at 20% 80%, ${c[4] || c[1]}, transparent 40%)`,
-    `radial-gradient(circle at 60% 40%, ${c[5] || c[2]}, transparent 42%)`,
-  ].join(", ");
+  const stops = [...c, c[0]]
+    .map((color, i, arr) => `${color} ${(i * 360) / (arr.length - 1)}deg`)
+    .join(", ");
+  const conic = `conic-gradient(from 0deg at 50% 50%, ${stops})`;
 
   useEffect(() => {
     const tick = () => {
-      tRef.current += 0.008;
-      const t = tRef.current;
-
-      if (capaARef.current) {
-        const x = Math.cos(t * 0.5) * 8;
-        const y = Math.sin(t * 0.4) * 7;
-        const s = 1.25 + Math.sin(t * 0.3) * 0.08;
-        const r = Math.sin(t * 0.35) * 3;
-        capaARef.current.style.transform = `translate(${x}%, ${y}%) scale(${s}) rotate(${r}deg)`;
+      angRef.current += 0.12; // grados por frame -> giro lento
+      if (ruedaRef.current) {
+        // Escala 2.2 para que el círculo cónico cubra toda la pantalla incluso en esquinas
+        ruedaRef.current.style.transform = `translate(-50%, -50%) rotate(${angRef.current}deg) scale(2.2)`;
       }
-      if (capaBRef.current) {
-        const x = Math.cos(t * 0.4 + 2) * -8;
-        const y = Math.sin(t * 0.5 + 1) * -7;
-        const s = 1.3 + Math.cos(t * 0.35) * 0.08;
-        const r = Math.cos(t * 0.4) * -3;
-        capaBRef.current.style.transform = `translate(${x}%, ${y}%) scale(${s}) rotate(${r}deg)`;
-      }
-
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -99,30 +80,20 @@ function FondoMobile({ paleta, intensity }: { paleta: string[]; intensity: numbe
       className="fixed inset-0 -z-10 overflow-hidden"
       style={{ background: "#0a0612" }}
     >
+      {/* Rueda cónica gigante centrada, rota sobre su centro -> nunca muestra bordes */}
       <div
-        ref={capaARef}
-        className="absolute"
+        ref={ruedaRef}
+        className="absolute top-1/2 left-1/2"
         style={{
-          inset: "-30%",
-          background: capaA,
+          width: "100vmax",
+          height: "100vmax",
+          background: conic,
           opacity: intensity,
-          filter: "blur(40px)",
+          filter: "blur(60px)",
           willChange: "transform",
         }}
       />
-      <div
-        ref={capaBRef}
-        className="absolute"
-        style={{
-          inset: "-30%",
-          background: capaB,
-          opacity: intensity * 0.9,
-          filter: "blur(45px)",
-          mixBlendMode: "screen",
-          willChange: "transform",
-        }}
-      />
-      <div className="absolute inset-0 bg-black/35" />
+      <div className="absolute inset-0 bg-black/40" />
     </div>
   );
 }
